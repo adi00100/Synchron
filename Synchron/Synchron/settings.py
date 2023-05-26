@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third Party
     "rest_framework",
+    "drf_yasg",
+    # Custom
+    "authentication.apps.AuthenticationConfig",
 ]
 
 REST_FRAMEWORK = {
@@ -60,6 +63,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Custom
+    "authentication.middleware.auth",
 ]
 
 ROOT_URLCONF = "Synchron.urls"
@@ -88,14 +92,13 @@ WSGI_APPLICATION = "Synchron.wsgi.application"
 
 
 DATABASES = {
-    # Postgres database
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "synchron",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "host.docker.internal",
-        "PORT": "5432",
+        "ENGINE": os.environ.get("ENGINE"),
+        "NAME": os.environ.get("NAME"),
+        "USER": os.environ.get("USER"),
+        "PASSWORD": os.environ.get("PASSWORD"),
+        "HOST": os.environ.get("HOST"),
+        "PORT": os.environ.get("PORT"),
     }
 }
 
