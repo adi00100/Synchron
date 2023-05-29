@@ -3,3 +3,6 @@ env
 *__pycache__
 db.sqlite3
 db.sqlite3-journal
+*migrations
+database-queries.ipynb
+*.vscode
