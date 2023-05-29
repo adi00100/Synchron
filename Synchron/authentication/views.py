@@ -22,7 +22,6 @@ class SignIn(GenericAPIView):
                 if user.check_password(data["password"]):
                     session = Session(user.id)
                     response = session.set_cookie_response()
-                    response["Location"] = "/"
                     response.status_code = 302
                     return response
 
@@ -63,7 +62,6 @@ class Logout(GenericAPIView):
     serializer_class = Serializer
 
     def post(self, request):
-        response = Session.delete_cookie_response(request.user_id, request.session)
-        response["Location"] = "/"
+        response = Session.delete_cookie_response(request.user_id, request.session_id)
         response.status_code = 302
         return response

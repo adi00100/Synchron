@@ -42,20 +42,21 @@ class Session:
             self.valid_till, "%Y-%m-%d %H:%M:%S"
         ).timestamp()
         response.set_cookie("user_id", value=self.user_id, max_age=age)
-        response.set_cookie("session", value=self.cookie, max_age=age)
+        response.set_cookie("session_id", value=self.cookie, max_age=age)
         return response
 
     @classmethod
-    def delete_cookie_response(cls, user_id, session):
-        query = f"""DELETE FROM {cls.__table_name__} 
-                    WHERE user_id='{user_id}' AND cookie='{session}'
-                """
-        try:
-            cursor.execute(query)
-        except:
-            pass
+    def delete_cookie_response(cls, user_id, session_id):
+        if user_id and session_id:
+            query = f"""DELETE FROM {cls.__table_name__} 
+                        WHERE user_id='{user_id}' AND cookie='{session_id}'
+                    """
+            try:
+                cursor.execute(query)
+            except:
+                pass
 
         response = JsonResponse({"msg": "Clearing Cookies"}, status=200)
         response.delete_cookie("user_id")
-        response.delete_cookie("session")
+        response.delete_cookie("session_id")
         return response

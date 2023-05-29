@@ -6,14 +6,18 @@ def auth(get_response):
     def add_user(request, *args, **kwargs):
         request.custom_user = None
         cookies = request.COOKIES
-        user_id, session = cookies.setdefault("user_id"), cookies.setdefault("session")
-        if user_id and session:
-            if Session.validate(user_id, session):
-                request.custom_user = User.get_by_id(cookies["user_id"])
-                request.user_id = user_id
-                request.session = session
+        request.user_id = cookies.setdefault("user_id")
+        request.session_id = cookies.setdefault("session_id")
+        if request.user_id and request.session_id:
+            if Session.validate(request.user_id, request.session_id):
+                request.custom_user = User.get_by_id(request.user_id)
             else:
-                return Session.delete_cookie_response(user_id, session)
+                response = Session.delete_cookie_response(
+                    request.user_id, request.session_id
+                )
+                request.user_id = None
+                request.session_id = None
+                return response
 
         response = get_response(request, *args, **kwargs)
         return response
