@@ -1,3 +1,7 @@
+from uuid import uuid1
+import bcrypt
+
+
 class Descriptor:
     def __init__(self):
         self.value = None

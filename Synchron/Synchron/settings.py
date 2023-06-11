@@ -44,9 +44,13 @@ INSTALLED_APPS = [
     # Third Party
     "rest_framework",
     "drf_yasg",
+    "django_extensions",
     # Custom
     "authentication.apps.AuthenticationConfig",
+    "administrator.apps.AdministratorConfig",
 ]
+
+SWAGGER_SETTINGS = {"SECURITY_DEFINITIONS": None}
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [

@@ -6,3 +6,5 @@ db.sqlite3-journal
 *migrations
 database-queries.ipynb
 *.vscode
+*temp.py
+*/load_data/*

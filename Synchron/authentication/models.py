@@ -42,6 +42,7 @@ class User:
             VALUES('{self.id}','{self.fname}','{self.lname}','{self.email}','{self.password}','{self.role}')
         """
         cursor.execute(query)
+        return self.id
 
     def update_password(self, password):
         self.password = password
