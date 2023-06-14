@@ -1,5 +1,6 @@
 from .sessions import Session
 from .models import User
+from rest_framework.response import Response
 
 
 def auth(get_response):
@@ -18,7 +19,6 @@ def auth(get_response):
                 request.user_id = None
                 request.session_id = None
                 return response
-
         response = get_response(request, *args, **kwargs)
         return response
 

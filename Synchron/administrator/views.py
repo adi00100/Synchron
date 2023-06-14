@@ -16,6 +16,7 @@ from .serializers import (
 )
 
 from django.db.utils import IntegrityError
+from django.db import connection
 
 # Create your views here.
 # Get all users
@@ -24,16 +25,17 @@ from django.db.utils import IntegrityError
 # Get teams and create teams
 
 
-class Retrieve_User(GenericAPIView):
+class Retrieve_Devs(GenericAPIView):
     parser_classes = (parsers.JSONParser,)
     serializer_class = User_Retrieve_Serializer
     permission_classes = [role("admin")]
 
     def get(self, request):
         """
-        ### List all users in the database.
+        ### List all developers in the database.
         """
-        cursor.execute("SELECT id,fname,lname from users")
+        cursor = connection.cursor()
+        cursor.execute("SELECT id,fname,lname from users WHERE role='DEV'")
         users = [{"id": i[0], "fname": i[1], "lname": i[2]} for i in cursor.fetchall()]
         response = Response(users, status=200)
         return response
@@ -48,7 +50,8 @@ class Retrieve_Scrum_Master(GenericAPIView):
         """
         ### List all scrum masters among users so that they can be assigned to the team.
         """
-        cursor.execute("SELECT id,fname,lname from users where role='SM';")
+        cursor = connection.cursor()
+        cursor.execute("SELECT id,fname,lname from users where role='SM'")
         users = [{"id": i[0], "fname": i[1], "lname": i[2]} for i in cursor.fetchall()]
         response = Response({"users": users}, status=200)
         return response
@@ -89,6 +92,7 @@ class Positions(GenericAPIView):
         """
         ### List all positions available.
         """
+        cursor = connection.cursor()
         cursor.execute("SELECT id,name FROM positions;")
         positions = [{"id": i[0], "name": i[1]} for i in cursor.fetchall()]
         return Response({"positions": positions}, status=200)
@@ -115,6 +119,7 @@ class Teams(GenericAPIView):
             data = serializer.validated_data
             team = Team(name=data["name"], scrum_master=data["scrum_master"])
             try:
+                cursor = connection.cursor()
                 cursor.execute(
                     f"SELECT 1 FROM USERS WHERE id='{team.scrum_master}' and role='SM'"
                 )
@@ -142,13 +147,14 @@ class Teams(GenericAPIView):
 
     def get(self, request):
         """
-        ### List all teams  in the database.
+        ### List all teams available.
         """
+        cursor = connection.cursor()
         cursor.execute("SELECT * FROM TEAMS")
-        res = [
+        teams = [
             {"id": i[0], "name": i[1], "scrum_master": i[2]} for i in cursor.fetchall()
         ]
-        return Response(res, status=200)
+        return Response(teams, status=200)
 
 
 class Add_Members(GenericAPIView):
@@ -192,7 +198,7 @@ class Retrieve_Member(GenericAPIView):
         """
         ### List all the members of the team.
         """
-
+        cursor = connection.cursor()
         cursor.execute(
             f"""
                 SELECT users.id,users.fname,users.lname,users.role,result.position
@@ -204,6 +210,7 @@ class Retrieve_Member(GenericAPIView):
                 ) AS result
                 NATURAL JOIN
                 USERS 
+                ORDER BY role DESC
             """
         )
 

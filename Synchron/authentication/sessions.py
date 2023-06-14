@@ -2,6 +2,7 @@ import datetime
 from utils import cursor
 from uuid import uuid1
 from django.http import JsonResponse
+from django.db import connection
 
 
 class Session:
@@ -29,12 +30,14 @@ class Session:
                     FROM {cls.__table_name__} 
                     WHERE user_id='{user_id}' AND cookie='{cookie}'
                 """
+        cursor = connection.cursor()
         cursor.execute(query)
-        res = cursor.fetchall()[0]
-        if res[-1] > datetime.datetime.now():
+
+        res = cursor.fetchall()
+        if res:
             return True
-        else:
-            return False
+
+        return False
 
     def set_cookie_response(self):
         response = JsonResponse({"msg": "Login Successful"}, status=200)

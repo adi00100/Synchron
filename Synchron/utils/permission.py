@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import PermissionDenied
-from . import cursor
+from django.db import connection
 
 
 def role(name):
@@ -51,6 +51,8 @@ class BelongsToTeam(BasePermission):
     def has_permission(self, request, view):
         try:
             team_id = view.kwargs["team_id"]
+            cursor = connection.cursor()
+
             cursor.execute(
                 f"""
                     SELECT 1 FROM members WHERE team_id='{team_id}' AND member_id='{request.custom_user.id}'
@@ -72,6 +74,8 @@ class CanAccessCard(BasePermission):
     def has_permission(self, request, view):
         try:
             card_id = view.kwargs["card_id"]
+            cursor = connection.cursor()
+
             cursor.execute(
                 f"""
                         SELECT * FROM
@@ -104,6 +108,7 @@ class CanChangeStandUp(BasePermission):
     def has_permission(self, request, view):
         try:
             team_id = request.data["team_id"]
+            cursor = connection.cursor()
 
             cursor.execute(
                 f"""

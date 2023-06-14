@@ -2,6 +2,7 @@ from utils import cursor
 from utils.descriptor import Name, Email, Password, ID
 from datetime import date
 import json
+from django.db import connection
 
 
 class Remarks:
@@ -27,6 +28,7 @@ class Remarks:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.card_id}','{self.member_id}','{json.dumps(self.notes)}')
         """
+        cursor = connection.cursor()
         cursor.execute(query)
 
     @staticmethod
@@ -78,6 +80,7 @@ class Stand_Up_Cards:
 
     def insert(self):
         query = f"""SELECT 1 FROM {self.__table_name__} WHERE team_id='{self.team_id}' and date='{self.date}'"""
+        cursor = connection.cursor()
         cursor.execute(query)
         if cursor.fetchall():
             raise ValueError(
@@ -88,5 +91,6 @@ class Stand_Up_Cards:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.team_id}','{self.date}','{self.release_cycle}','{self.sprint_id}','{self.extra_notes}','{self.accomplished}','{self.working_on}','{self.blockers}')
         """
+        cursor = connection.cursor()
         cursor.execute(query)
         return self.id

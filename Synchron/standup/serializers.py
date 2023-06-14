@@ -46,6 +46,7 @@ class Remarks_Update_Serializer(With_Id):
 
 class StandUp_Update_Serializer(With_Id):
     release_cycle = serializers.CharField()
+    team_id = serializers.CharField()
     sprint_id = serializers.CharField()
     extra_notes = serializers.CharField()
     accomplished = serializers.CharField()

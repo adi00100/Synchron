@@ -1,6 +1,7 @@
 import bcrypt
 from utils import cursor
 from utils.descriptor import Name, Email, Password, ID
+from django.db import connection
 
 
 class User:
@@ -41,6 +42,7 @@ class User:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.fname}','{self.lname}','{self.email}','{self.password}','{self.role}')
         """
+        cursor = connection.cursor()
         cursor.execute(query)
         return self.id
 
@@ -51,6 +53,7 @@ class User:
                     SET password='{self.password}'
                     WHERE id='{self.id}'
                 """
+        cursor = connection.cursor()
         cursor.execute(query)
 
     def delete(self):
@@ -58,6 +61,7 @@ class User:
             DELETE FROM {self.__table_name__} 
             WHERE id={self.id}
         """
+        cursor = connection.cursor()
         cursor.execute(query)
 
     @classmethod
@@ -66,8 +70,9 @@ class User:
                     FROM {cls.__table_name__} 
                     WHERE id='{id}'
                 """
+        cursor = connection.cursor()
         cursor.execute(query)
-        return cls.__get_user()
+        return cls.__get_user(cursor.fetchone())
 
     @classmethod
     def get_by_email(cls, email):
@@ -75,15 +80,14 @@ class User:
                     FROM {cls.__table_name__} 
                     WHERE email='{email}'
                 """
-
+        cursor = connection.cursor()
         cursor.execute(query)
-        return cls.__get_user()
+        return cls.__get_user(cursor.fetchone())
 
     @classmethod
-    def __get_user(cls):
-        res = cursor.fetchone()
+    def __get_user(cls, res):
         if res:
-            res = {key: value for key, value in zip(cls.__fields__, res)}
+            res = {key: value for key, value in list(zip(cls.__fields__, res))}
             password = res.pop("password")
             user = User(**res)
             user._hashed_password = password

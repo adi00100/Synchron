@@ -19,6 +19,7 @@ from .serializers import (
     StandUp_Summary_Retrieve_Serializer,
     StandUp_Update_Serializer,
 )
+from django.db import connection
 
 # List all teams/standup board user is involved
 # Open and view the team members
@@ -36,10 +37,12 @@ class Teams_View(GenericAPIView):
         #### Get the list of teams in which the user is invlove.
         """
         if request.custom_user.role == "SM":
+            cursor = connection.cursor()
             cursor.execute(
                 f"SELECT teams.id,teams.name FROM teams where scrum_master='{request.custom_user.id}'"
             )
         else:
+            cursor = connection.cursor()
             cursor.execute(
                 f"SELECT teams.id,teams.name FROM members JOIN teams on members.team_id=teams.id where members.member_id='{request.custom_user.id}'"
             )
@@ -58,7 +61,7 @@ class Members_View(GenericAPIView):
         """
         #### Get the list of members of the given team if the user is involved in it.
         """
-
+        cursor = connection.cursor()
         cursor.execute(
             f"""
                 SELECT users.id,users.fname,users.lname,users.role,result.position
@@ -115,6 +118,7 @@ class StandUp(GenericAPIView):
                     {"msg": "Card already exists for today."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            cursor = connection.cursor()
 
             cursor.execute(
                 f"""
@@ -123,7 +127,6 @@ class StandUp(GenericAPIView):
             )
 
             for i in cursor.fetchall():
-                print(i)
                 remarks = Remarks(card_id=id, member_id=i[0], notes=[])
                 remarks.insert()
 
@@ -139,6 +142,8 @@ class StandUp(GenericAPIView):
         serializer = serializer_class(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
+            cursor = connection.cursor()
+
             cursor.execute(
                 f"""
                     UPDATE stand_up_cards SET 
@@ -148,6 +153,7 @@ class StandUp(GenericAPIView):
             )
 
             for i in data["remarks"]:
+                cursor = connection.cursor()
                 cursor.execute(
                     f"""UPDATE remarks SET notes='{json.dumps(i["notes"])}' WHERE id='{i["id"]}'"""
                 )
@@ -165,11 +171,14 @@ class StandUp_Retrieve(GenericAPIView):
         """
         ### Get the list of standup cards for the given team.
         """
+        cursor = connection.cursor()
+
         cursor.execute(
             f"SELECT * FROM stand_up_cards where team_id='{team_id}' ORDER BY date DESC"
         )
         description = [cursor.description[i][0] for i in range(len(cursor.description))]
         stand_up_cards = [dict(zip(description, i)) for i in cursor.fetchall()]
+        cursor = connection.cursor()
         return Response(stand_up_cards, status=200)
 
 
@@ -182,11 +191,21 @@ class Card_Retrieve(GenericAPIView):
         """
         #### Get the details of the card.
         """
+        cursor = connection.cursor()
         cursor.execute(f"SELECT * FROM stand_up_cards where id='{card_id}'")
         description = [cursor.description[i][0] for i in range(len(cursor.description))]
         stand_up_card = dict(zip(description, cursor.fetchone()))
+        cursor = connection.cursor()
+
         cursor.execute(
-            f"SELECT remarks.id,users.fname,users.lname,users.role,remarks.notes FROM remarks JOIN users ON remarks.member_id=users.id WHERE card_id='{card_id}'"
+            f"""SELECT remarks.id AS id,users.fname AS fname, users.lname AS lname, remarks.notes AS notes,positions.name as position
+                FROM remarks
+                JOIN users ON remarks.member_id = users.id
+                JOIN stand_up_cards ON stand_up_cards.id = remarks.card_id
+                JOIN members ON members.member_id=users.id AND members.team_id=stand_up_cards.team_id
+                JOIN positions ON positions.id=members.position
+                WHERE remarks.card_id = '{card_id}'
+            """
         )
         description = [cursor.description[i][0] for i in range(len(cursor.description))]
         remarks = [dict(zip(description, i)) for i in cursor.fetchall()]
