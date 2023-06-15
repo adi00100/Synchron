@@ -28,8 +28,8 @@ class Remarks:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.card_id}','{self.member_id}','{json.dumps(self.notes)}')
         """
-        cursor = connection.cursor()
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
 
     @staticmethod
     def encode_notes(notes):
@@ -80,17 +80,16 @@ class Stand_Up_Cards:
 
     def insert(self):
         query = f"""SELECT 1 FROM {self.__table_name__} WHERE team_id='{self.team_id}' and date='{self.date}'"""
-        cursor = connection.cursor()
-        cursor.execute(query)
-        if cursor.fetchall():
-            raise ValueError(
-                f"The standup card has already been created for the {self.date} for team {self.team_id}."
-            )
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            if cursor.fetchall():
+                raise ValueError(
+                    f"The standup card has already been created for the {self.date} for team {self.team_id}."
+                )
 
-        query = f"""
-            INSERT INTO {self.__table_name__}({self.__fields_str__})
-            VALUES('{self.id}','{self.team_id}','{self.date}','{self.release_cycle}','{self.sprint_id}','{self.extra_notes}','{self.accomplished}','{self.working_on}','{self.blockers}')
-        """
-        cursor = connection.cursor()
-        cursor.execute(query)
+            query = f"""
+                INSERT INTO {self.__table_name__}({self.__fields_str__})
+                VALUES('{self.id}','{self.team_id}','{self.date}','{self.release_cycle}','{self.sprint_id}','{self.extra_notes}','{self.accomplished}','{self.working_on}','{self.blockers}')
+            """
+            cursor.execute(query)
         return self.id

@@ -42,8 +42,8 @@ class User:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.fname}','{self.lname}','{self.email}','{self.password}','{self.role}')
         """
-        cursor = connection.cursor()
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
         return self.id
 
     def update_password(self, password):
@@ -53,16 +53,17 @@ class User:
                     SET password='{self.password}'
                     WHERE id='{self.id}'
                 """
-        cursor = connection.cursor()
-        cursor.execute(query)
+
+        with connection.cursor() as cursor:
+            cursor.execute(query)
 
     def delete(self):
         query = f"""
             DELETE FROM {self.__table_name__} 
             WHERE id={self.id}
         """
-        cursor = connection.cursor()
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
 
     @classmethod
     def get_by_id(cls, id):
@@ -70,9 +71,9 @@ class User:
                     FROM {cls.__table_name__} 
                     WHERE id='{id}'
                 """
-        cursor = connection.cursor()
-        cursor.execute(query)
-        return cls.__get_user(cursor.fetchone())
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            return cls.__get_user(cursor.fetchone())
 
     @classmethod
     def get_by_email(cls, email):
@@ -80,9 +81,9 @@ class User:
                     FROM {cls.__table_name__} 
                     WHERE email='{email}'
                 """
-        cursor = connection.cursor()
-        cursor.execute(query)
-        return cls.__get_user(cursor.fetchone())
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            return cls.__get_user(cursor.fetchone())
 
     @classmethod
     def __get_user(cls, res):

@@ -22,7 +22,8 @@ class Session:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.user_id}','{self.cookie}','{self.valid_till}')
         """
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
 
     @classmethod
     def validate(cls, user_id, cookie):
@@ -30,11 +31,12 @@ class Session:
                     FROM {cls.__table_name__} 
                     WHERE user_id='{user_id}' AND cookie='{cookie}'
                 """
-        cursor = connection.cursor()
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            res = cursor.fetchall()
 
-        res = cursor.fetchall()
         if res:
+            # Check For date validity
             return True
 
         return False
@@ -55,7 +57,8 @@ class Session:
                         WHERE user_id='{user_id}' AND cookie='{session_id}'
                     """
             try:
-                cursor.execute(query)
+                with connection.cursor() as cursor:
+                    cursor.execute(query)
             except:
                 pass
 

@@ -36,18 +36,17 @@ class Teams_View(GenericAPIView):
         """
         #### Get the list of teams in which the user is invlove.
         """
-        if request.custom_user.role == "SM":
-            cursor = connection.cursor()
-            cursor.execute(
-                f"SELECT teams.id,teams.name FROM teams where scrum_master='{request.custom_user.id}'"
-            )
-        else:
-            cursor = connection.cursor()
-            cursor.execute(
-                f"SELECT teams.id,teams.name FROM members JOIN teams on members.team_id=teams.id where members.member_id='{request.custom_user.id}'"
-            )
+        with connection.cursor() as cursor:
+            if request.custom_user.role == "SM":
+                cursor.execute(
+                    f"SELECT teams.id,teams.name FROM teams where scrum_master='{request.custom_user.id}'"
+                )
+            else:
+                cursor.execute(
+                    f"SELECT teams.id,teams.name FROM members JOIN teams on members.team_id=teams.id where members.member_id='{request.custom_user.id}'"
+                )
 
-        teams = [{"id": i[0], "name": i[1]} for i in cursor.fetchall()]
+            teams = [{"id": i[0], "name": i[1]} for i in cursor.fetchall()]
 
         return Response(teams, status=200)
 
@@ -61,25 +60,31 @@ class Members_View(GenericAPIView):
         """
         #### Get the list of members of the given team if the user is involved in it.
         """
-        cursor = connection.cursor()
-        cursor.execute(
-            f"""
-                SELECT users.id,users.fname,users.lname,users.role,result.position
-                FROM
-                (
-                    (SELECT scrum_master AS id,NULL AS position FROM teams where id='{team_id}')
-                    UNION
-                    (SELECT members.member_id AS id,positions.name AS position FROM members JOIN positions ON members.position=positions.id WHERE members.team_id='{team_id}')
-                ) AS result
-                NATURAL JOIN
-                USERS 
-            """
-        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                    SELECT users.id,users.fname,users.lname,users.role,result.position
+                    FROM
+                    (
+                        (SELECT scrum_master AS id,NULL AS position FROM teams where id='{team_id}')
+                        UNION
+                        (SELECT members.member_id AS id,positions.name AS position FROM members JOIN positions ON members.position=positions.id WHERE members.team_id='{team_id}')
+                    ) AS result
+                    NATURAL JOIN
+                    USERS 
+                """
+            )
 
-        res = [
-            {"id": i[0], "fname": i[1], "lname": i[2], "role": i[3], "position": i[4]}
-            for i in cursor.fetchall()
-        ]
+            res = [
+                {
+                    "id": i[0],
+                    "fname": i[1],
+                    "lname": i[2],
+                    "role": i[3],
+                    "position": i[4],
+                }
+                for i in cursor.fetchall()
+            ]
 
         return Response(res, status=200)
 
@@ -118,17 +123,17 @@ class StandUp(GenericAPIView):
                     {"msg": "Card already exists for today."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            cursor = connection.cursor()
 
-            cursor.execute(
-                f"""
-                SELECT member_id from members where team_id='{card.team_id}'
-            """
-            )
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                    SELECT member_id from members where team_id='{card.team_id}'
+                """
+                )
 
-            for i in cursor.fetchall():
-                remarks = Remarks(card_id=id, member_id=i[0], notes=[])
-                remarks.insert()
+                for i in cursor.fetchall():
+                    remarks = Remarks(card_id=id, member_id=i[0], notes=[])
+                    remarks.insert()
 
             return Response({"msg": "Card created", "id": id}, status=200)
 
@@ -142,21 +147,19 @@ class StandUp(GenericAPIView):
         serializer = serializer_class(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
-            cursor = connection.cursor()
-
-            cursor.execute(
-                f"""
-                    UPDATE stand_up_cards SET 
-                    release_cycle='{data["release_cycle"]}',sprint_id='{data["sprint_id"]}',extra_notes='{data["extra_notes"]}',accomplished='{data["accomplished"]}',working_on='{data["working_on"]}',blockers='{data["blockers"]}'
-                    WHERE id='{data["id"]}'
-                """
-            )
-
-            for i in data["remarks"]:
-                cursor = connection.cursor()
+            with connection.cursor() as cursor:
                 cursor.execute(
-                    f"""UPDATE remarks SET notes='{json.dumps(i["notes"])}' WHERE id='{i["id"]}'"""
+                    f"""
+                        UPDATE stand_up_cards SET 
+                        release_cycle='{data["release_cycle"]}',sprint_id='{data["sprint_id"]}',extra_notes='{data["extra_notes"]}',accomplished='{data["accomplished"]}',working_on='{data["working_on"]}',blockers='{data["blockers"]}'
+                        WHERE id='{data["id"]}'
+                    """
                 )
+
+                for i in data["remarks"]:
+                    cursor.execute(
+                        f"""UPDATE remarks SET notes='{json.dumps(i["notes"])}' WHERE id='{i["id"]}'"""
+                    )
 
             return Response({"msg": "Data updated successfully."})
         return Response({"msg": "invalid data."}, status=status.HTTP_400_BAD_REQUEST)
@@ -171,14 +174,15 @@ class StandUp_Retrieve(GenericAPIView):
         """
         ### Get the list of standup cards for the given team.
         """
-        cursor = connection.cursor()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT * FROM stand_up_cards where team_id='{team_id}' ORDER BY date DESC"
+            )
+            description = [
+                cursor.description[i][0] for i in range(len(cursor.description))
+            ]
+            stand_up_cards = [dict(zip(description, i)) for i in cursor.fetchall()]
 
-        cursor.execute(
-            f"SELECT * FROM stand_up_cards where team_id='{team_id}' ORDER BY date DESC"
-        )
-        description = [cursor.description[i][0] for i in range(len(cursor.description))]
-        stand_up_cards = [dict(zip(description, i)) for i in cursor.fetchall()]
-        cursor = connection.cursor()
         return Response(stand_up_cards, status=200)
 
 
@@ -191,24 +195,27 @@ class Card_Retrieve(GenericAPIView):
         """
         #### Get the details of the card.
         """
-        cursor = connection.cursor()
-        cursor.execute(f"SELECT * FROM stand_up_cards where id='{card_id}'")
-        description = [cursor.description[i][0] for i in range(len(cursor.description))]
-        stand_up_card = dict(zip(description, cursor.fetchone()))
-        cursor = connection.cursor()
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM stand_up_cards where id='{card_id}'")
+            description = [
+                cursor.description[i][0] for i in range(len(cursor.description))
+            ]
+            stand_up_card = dict(zip(description, cursor.fetchone()))
 
-        cursor.execute(
-            f"""SELECT remarks.id AS id,users.fname AS fname, users.lname AS lname, remarks.notes AS notes,positions.name as position
-                FROM remarks
-                JOIN users ON remarks.member_id = users.id
-                JOIN stand_up_cards ON stand_up_cards.id = remarks.card_id
-                JOIN members ON members.member_id=users.id AND members.team_id=stand_up_cards.team_id
-                JOIN positions ON positions.id=members.position
-                WHERE remarks.card_id = '{card_id}'
-            """
-        )
-        description = [cursor.description[i][0] for i in range(len(cursor.description))]
-        remarks = [dict(zip(description, i)) for i in cursor.fetchall()]
+            cursor.execute(
+                f"""SELECT remarks.id AS id,users.fname AS fname, users.lname AS lname, remarks.notes AS notes,positions.name as position
+                    FROM remarks
+                    JOIN users ON remarks.member_id = users.id
+                    JOIN stand_up_cards ON stand_up_cards.id = remarks.card_id
+                    JOIN members ON members.member_id=users.id AND members.team_id=stand_up_cards.team_id
+                    JOIN positions ON positions.id=members.position
+                    WHERE remarks.card_id = '{card_id}'
+                """
+            )
+            description = [
+                cursor.description[i][0] for i in range(len(cursor.description))
+            ]
+            remarks = [dict(zip(description, i)) for i in cursor.fetchall()]
         for i in remarks:
             i["notes"] = json.loads(i["notes"])
         stand_up_card["remarks"] = remarks

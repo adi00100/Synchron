@@ -34,9 +34,11 @@ class Retrieve_Devs(GenericAPIView):
         """
         ### List all developers in the database.
         """
-        cursor = connection.cursor()
-        cursor.execute("SELECT id,fname,lname from users WHERE role='DEV'")
-        users = [{"id": i[0], "fname": i[1], "lname": i[2]} for i in cursor.fetchall()]
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id,fname,lname from users WHERE role='DEV'")
+            users = [
+                {"id": i[0], "fname": i[1], "lname": i[2]} for i in cursor.fetchall()
+            ]
         response = Response(users, status=200)
         return response
 
@@ -50,9 +52,11 @@ class Retrieve_Scrum_Master(GenericAPIView):
         """
         ### List all scrum masters among users so that they can be assigned to the team.
         """
-        cursor = connection.cursor()
-        cursor.execute("SELECT id,fname,lname from users where role='SM'")
-        users = [{"id": i[0], "fname": i[1], "lname": i[2]} for i in cursor.fetchall()]
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id,fname,lname from users where role='SM'")
+            users = [
+                {"id": i[0], "fname": i[1], "lname": i[2]} for i in cursor.fetchall()
+            ]
         response = Response({"users": users}, status=200)
         return response
 
@@ -92,9 +96,10 @@ class Positions(GenericAPIView):
         """
         ### List all positions available.
         """
-        cursor = connection.cursor()
-        cursor.execute("SELECT id,name FROM positions;")
-        positions = [{"id": i[0], "name": i[1]} for i in cursor.fetchall()]
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id,name FROM positions;")
+            positions = [{"id": i[0], "name": i[1]} for i in cursor.fetchall()]
         return Response({"positions": positions}, status=200)
 
 
@@ -119,19 +124,19 @@ class Teams(GenericAPIView):
             data = serializer.validated_data
             team = Team(name=data["name"], scrum_master=data["scrum_master"])
             try:
-                cursor = connection.cursor()
-                cursor.execute(
-                    f"SELECT 1 FROM USERS WHERE id='{team.scrum_master}' and role='SM'"
-                )
-
-                if cursor.fetchall():
-                    id = team.insert()
-                    return Response({"id": id}, status=200)
-                else:
-                    return Response(
-                        {"msg": "User not a scrum master."},
-                        status=status.HTTP_400_BAD_REQUEST,
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        f"SELECT 1 FROM USERS WHERE id='{team.scrum_master}' and role='SM'"
                     )
+
+                    if cursor.fetchall():
+                        id = team.insert()
+                        return Response({"id": id}, status=200)
+                    else:
+                        return Response(
+                            {"msg": "User not a scrum master."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
             except IntegrityError:
                 return Response(
                     {"msg": "Team already exists."},
@@ -149,11 +154,12 @@ class Teams(GenericAPIView):
         """
         ### List all teams available.
         """
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM TEAMS")
-        teams = [
-            {"id": i[0], "name": i[1], "scrum_master": i[2]} for i in cursor.fetchall()
-        ]
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM TEAMS")
+            teams = [
+                {"id": i[0], "name": i[1], "scrum_master": i[2]}
+                for i in cursor.fetchall()
+            ]
         return Response(teams, status=200)
 
 
@@ -198,24 +204,24 @@ class Retrieve_Member(GenericAPIView):
         """
         ### List all the members of the team.
         """
-        cursor = connection.cursor()
-        cursor.execute(
-            f"""
-                SELECT users.id,users.fname,users.lname,users.role,result.position
-                FROM
-                (
-                    (SELECT scrum_master AS id,NULL AS position FROM teams where id='{team_id}')
-                    UNION
-                    (SELECT members.member_id AS id,positions.name AS position FROM members JOIN positions ON members.position=positions.id WHERE members.team_id='{team_id}')
-                ) AS result
-                NATURAL JOIN
-                USERS 
-                ORDER BY role DESC
-            """
-        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                    SELECT users.id,users.fname,users.lname,users.role,result.position
+                    FROM
+                    (
+                        (SELECT scrum_master AS id,NULL AS position FROM teams where id='{team_id}')
+                        UNION
+                        (SELECT members.member_id AS id,positions.name AS position FROM members JOIN positions ON members.position=positions.id WHERE members.team_id='{team_id}')
+                    ) AS result
+                    NATURAL JOIN
+                    USERS 
+                    ORDER BY role DESC
+                """
+            )
 
-        members = [
-            {"id": i[0], "fname": i[1], "lname": i[2], "role": i[3], "position": i[4]}
-            for i in cursor.fetchall()
-        ]
+            members = [
+                {"id": i[0], "fname": i[1], "lname": i[2], "role": i[3], "position": i[4]}
+                for i in cursor.fetchall()
+            ]
         return Response(members, status=200)

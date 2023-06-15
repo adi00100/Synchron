@@ -51,19 +51,18 @@ class BelongsToTeam(BasePermission):
     def has_permission(self, request, view):
         try:
             team_id = view.kwargs["team_id"]
-            cursor = connection.cursor()
-
-            cursor.execute(
-                f"""
-                    SELECT 1 FROM members WHERE team_id='{team_id}' AND member_id='{request.custom_user.id}'
-                    UNION
-                    SELECT 1 FROM teams WHERE id='{team_id}' AND scrum_master='{request.custom_user.id}'
-                """
-            )
-            if bool(cursor.fetchone()):
-                return True
-            else:
-                raise self.exception
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                        SELECT 1 FROM members WHERE team_id='{team_id}' AND member_id='{request.custom_user.id}'
+                        UNION
+                        SELECT 1 FROM teams WHERE id='{team_id}' AND scrum_master='{request.custom_user.id}'
+                    """
+                )
+                if bool(cursor.fetchone()):
+                    return True
+                else:
+                    raise self.exception
         except:
             raise self.exception
 
@@ -74,30 +73,28 @@ class CanAccessCard(BasePermission):
     def has_permission(self, request, view):
         try:
             card_id = view.kwargs["card_id"]
-            cursor = connection.cursor()
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                            SELECT * FROM
+                            (
+                                    SELECT scrum_master AS id
+                                    FROM teams JOIN stand_up_cards ON teams.id=stand_up_cards.team_id
+                                    WHERE stand_up_cards.id='{card_id}'
 
-            cursor.execute(
-                f"""
-                        SELECT * FROM
-                        (
-                                SELECT scrum_master AS id
-                                FROM teams JOIN stand_up_cards ON teams.id=stand_up_cards.team_id
-                                WHERE stand_up_cards.id='{card_id}'
+                                    UNION
 
-                                UNION
-
-                                SELECT members.member_id AS id
-                                FROM members JOIN stand_up_cards ON members.team_id=stand_up_cards.team_id
-                                WHERE stand_up_cards.id='{card_id}'
-                        ) AS a
-                    WHERE  id='{request.custom_user.id}'
-                """
-            )
-            if bool(cursor.fetchone()):
-                return True
-            else:
-                raise self.exception
-
+                                    SELECT members.member_id AS id
+                                    FROM members JOIN stand_up_cards ON members.team_id=stand_up_cards.team_id
+                                    WHERE stand_up_cards.id='{card_id}'
+                            ) AS a
+                        WHERE  id='{request.custom_user.id}'
+                    """
+                )
+                if bool(cursor.fetchone()):
+                    return True
+                else:
+                    raise self.exception
         except:
             raise self.exception
 
@@ -108,17 +105,15 @@ class CanChangeStandUp(BasePermission):
     def has_permission(self, request, view):
         try:
             team_id = request.data["team_id"]
-            cursor = connection.cursor()
-
-            cursor.execute(
-                f"""
-                    SELECT 1 FROM teams WHERE id='{team_id}' AND scrum_master='{request.custom_user.id}'
-                """
-            )
-            if bool(cursor.fetchone()):
-                return True
-            else:
-                raise self.exception
-
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"""
+                        SELECT 1 FROM teams WHERE id='{team_id}' AND scrum_master='{request.custom_user.id}'
+                    """
+                )
+                if bool(cursor.fetchone()):
+                    return True
+                else:
+                    raise self.exception
         except:
             raise self.exception

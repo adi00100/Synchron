@@ -1,5 +1,6 @@
 from utils import cursor
 from utils.descriptor import ID, Name
+from django.db import connection
 
 
 class Team:
@@ -20,7 +21,9 @@ class Team:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.name}','{self.scrum_master}')
         """
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+
         return self.id
 
 
@@ -40,7 +43,8 @@ class Position:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.name}')
         """
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
         return self.id
 
 
@@ -64,5 +68,6 @@ class Member:
             INSERT INTO {self.__table_name__}({self.__fields_str__})
             VALUES('{self.id}','{self.team_id}','{self.member_id}','{self.position}')
         """
-        cursor.execute(query)
+        with connection.cursor() as cursor:
+            cursor.execute(query)
         return self.id
